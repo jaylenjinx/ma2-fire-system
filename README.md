@@ -36,3 +36,36 @@ Dim FX look buttons, PREP + FIRE and the layouts checked live.
 - In a layout, negative y is up.
 - `gma.show.getobj.handle("Executor p.e")` works; executors have no readable state from Lua.
 - Swatch books are `Gel n` (by index, "MA colors" is not book 1), gels are `Gel n.m`.
+
+## FireSystem Presets MA2 (presets only)
+`plugins/FireSystemPresetsMA2.lua` / `.xml` is a second, separate plugin. It only makes the presets that
+FireSystem on grandMA3 makes, for groups 1-12 (missing groups are skipped). No sequences, executors,
+macros, layouts or views. Install it the same way (import `FireSystemPresetsMA2.xml`) and run it from the pool.
+It asks whether to replace presets that are already there (OK = make them all again, Cancel = only the missing ones).
+
+Same numbers as on MA3 (MA3's All 1 pool 21 is MA2's All pool 0):
+
+| Pool | Presets |
+| --- | --- |
+| Dimmer 1.201-215 | Full, Half, Sine 1/3/4, Ramp Down 1/3/4, Ramp Up 1/3/4, Square 1/3/4, Fan |
+| Position 2.201-212 | Pan Left, Fan Out, Fan Out Small, Pan Centre, Fan In Small, Fan In, Pan Right, Wide Out, Wide In, Cross, X, Cross Hatch |
+| Position 2.221-227 | Tilt Back, Tilt Down, Tilt 15/30/45/60, Tilt Flat |
+| Position 2.251-262 | Pan Swing / Left / Right / Wide, sizes - / normal / + |
+| Position 2.271-282 | Tilt Swing / Up / Down, Circle, sizes - / normal / + |
+| Colour 4.201-215, 4.231-245, 4.261-275 | 15 colours, then their Pastel and Dark versions |
+| Focus 6.201-205 | Zoom Narrow / Mid / Wide / Full, Zoom Sine |
+| All 0.221-223 | Strobe, Pulse Strb, Rnd Strobe |
+| All 0.271-276 | Fly In, Fly Out, sizes - / normal / + |
+| All 0.281-292 | Bump options: Dim 0, Prism Open, Gobo Open, Iris Close / Open, Zoom Small / Big, Tilt Up / Down |
+| All 0.301-312, 0.321-332, 0.341-352 | Strobe, Rnd and Gen per group (new numbers: MA3's 21.232+ only has room for 8 groups) |
+
+Differences from MA3:
+- MA2 has no phasers, so the moving presets hold MA2 effect layers (form, low, high, width, BPM). The
+  Position FX are meant as relative effects around where the heads point.
+- Strobes are dimmer effects (PWM 10 Hz, Ramp Minus pulse, shuffled PWM for random): MA2's Lua can't
+  read a fixture's shutter strobe range.
+- Bump Prism 1, Prism 2, Gobo 1 and Shutter Open aren't made: MA3 reads them from each fixture's wheel.
+- Colours use the MA2 mix attributes COLORRGB1-3, White 5, Warm white 6, Cool white 7 (the others go to 0).
+- Zoom values are % of the zoom range (`ZOOM` in CONFIG).
+
+Untested on a console yet: check the effect presets and the X / Cross Hatch fans (stepped with `Next`) first.
