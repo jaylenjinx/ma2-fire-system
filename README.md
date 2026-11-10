@@ -55,18 +55,26 @@ aren't FireSystem's (their name doesn't start with "FS ") are left alone and lis
 | Position 2.32-43 | Tilt Swing / Up / Down, Circle, sizes - / normal / + |
 | Colour 4.1-15, 4.16-30, 4.31-45 | 15 colours, then their Pastel and Dark versions |
 | Focus 6.1-5 | Zoom Narrow / Mid / Wide / Full, Zoom Sine |
+| Focus 6.6-8 | Focus Min / Mid / Max |
+| Gobo 3.1-10, 3.11-20 | Gobo 1 and Gobo 2 wheel slots (Open, then each gobo, read from each fixture type) |
+| Gobo 3.21-25, 3.26-30 | Gobo 1 / Gobo 2 rotation: Stop, > Slow, > Fast, < Slow, < Fast |
+| Beam 5.1-6 | Shutter Open, Closed, Strobe, Strobe Slow, Rnd Strobe, Pulse |
+| Beam 5.7-9 | Iris Open / Mid / Closed |
+| Beam 5.10-14, 5.15-19 | Prism Open + prism slots, then prism rotation Stop / > Slow / > Fast / < Slow / < Fast |
 | All 0.1-3 | Strobe, Pulse Strb, Rnd Strobe |
 | All 0.4-9 | Fly In, Fly Out, sizes - / normal / + |
-| All 0.10-18 | Bump options: Dim 0, Prism Open, Gobo Open, Iris Close / Open, Zoom Small / Big, Tilt Up / Down |
-| All 0.19-30, 0.31-42, 0.43-54 | Strobe, Rnd and Gen per group (slot = group number) |
+| All 0.10-22 | Bump options: Dim 0, Prism Open / 1 / 2, Gobo 1, Gobo Open, Iris Close / Open, Zoom Small / Big, Tilt Up / Down, Shutter Open |
+| All 0.23-34, 0.35-46, 0.47-58 | Strobe, Rnd and Gen per group (slot = group number) |
 
 Differences from MA3:
 - MA2 has no phasers, so the moving presets hold MA2 effect layers (form, low, high, width, BPM). The
   Position FX are meant as relative effects around where the heads point.
-- Strobes are dimmer effects (PWM 10 Hz, Ramp Minus pulse, shuffled PWM for random): MA2's Lua can't
-  read a fixture's shutter strobe range.
-- Bump Prism 1, Prism 2, Gobo 1 and Shutter Open aren't made: MA3 reads them from each fixture's wheel.
+- Shutter, gobo, prism, iris and rotation values are read from each fixture type's channel sets, so one
+  preset holds the right value for every type in the groups. Gobos and prisms on a rotating wheel are
+  stored with rotation stopped, so the rotation presets work on top of them.
+- Strobes use each fixture's shutter strobe range; fixtures without one get a dimmer effect (PWM 10 Hz,
+  Ramp Minus pulse, shuffled PWM for random).
 - Colours use the MA2 mix attributes COLORRGB1-3, White 5, Warm white 6, Cool white 7 (the others go to 0).
-- Zoom values are % of the zoom range (`ZOOM` in CONFIG).
+- Zoom values are % of the zoom range (`ZOOM` in CONFIG). Focus is 0 / 50 / 100 % of the focus range.
 
-Untested on a console yet: check the effect presets and the X / Cross Hatch fans (stepped with `Next`) first.
+Untested on a console yet: check the effect presets, the X / Cross Hatch fans (stepped with `Next`) and the gobo / prism rotation directions first.
