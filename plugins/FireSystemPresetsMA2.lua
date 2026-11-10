@@ -4,8 +4,8 @@
 -- Run it from the Plugins pool. It asks whether to replace presets that are already there
 -- (Yes = make them all again, No = only make the missing ones). It only touches its own numbers.
 --
--- Same preset numbers as FireSystem on MA3 (MA3's All 1 pool 21 is MA2's All pool 0), except the
--- per-group strobes, which need room for 12 groups (0.301+).
+-- Every pool starts at preset 1 (the same presets as FireSystem on MA3, numbered from .1;
+-- MA3's All 1 pool 21 is MA2's All pool 0). The list is in the README.
 -- MA3 builds its effects as phasers; MA2 has none, so the moving presets hold MA2 effect layers
 -- (form, low, high, width, BPM) instead.
 
@@ -33,8 +33,9 @@ local CFG = {
   -- Zoom presets and bumps, in % of the zoom range (MA3 uses DMX 0 / 85 / 170 / 255)
   ZOOM = {0, 33, 67, 100},
 
-  -- Per-group strobe presets in the All pool: Strobe G1-12 = 0.301-312, Rnd = 0.321-332, Gen = 0.341-352
-  STROBE_GRP = {strobe = 300, random = 320, gen = 340},
+  -- Per-group strobe presets in the All pool (12 slots each, by group number):
+  -- Strobe G1-12 = 0.19-30, Rnd = 0.31-42, Gen = 0.43-54
+  STROBE_GRP = {strobe = 18, random = 30, gen = 42},
 
   LOG = true,        -- echo every command to the System Monitor
 }
@@ -42,7 +43,14 @@ local CFG = {
 -------------------------------------------------------------------------------------------------
 -- Preset lists (as in FireSystem.lua on MA3)
 -------------------------------------------------------------------------------------------------
-local S = 201  -- first generated preset in each pool
+-- First preset of each block (every pool starts at 1)
+local N = {
+  dim = 1,                                         -- Dimmer 1.1-15
+  pan = 1, tilt = 13, panfx = 20, tiltfx = 32,     -- Position 2.1-12, 2.13-19, 2.20-31, 2.32-43
+  col = 1, pastel = 16, dark = 31,                 -- Colour 4.1-15, 4.16-30, 4.31-45
+  zoom = 1,                                        -- Focus 6.1-5
+  strobe = 1, fly = 4, bump = 10,                  -- All 0.1-3, 0.4-9, 0.10-18 (per-group strobes 0.19+)
+}
 
 -- Dimmer pool 1.201-215: {name, shape, width 1/n}
 local DIM_FORMS = {
@@ -178,9 +186,24 @@ local function add(l, more) for _, x in ipairs(more) do l[#l + 1] = x end return
 
 -- Stores the programmer (after `lines`, with every group selected first) into Preset pool.no.
 -- A preset that is already there is kept unless the run replaces them.
+-- true when Preset id must be left alone: someone else's preset (its name doesn't start with
+-- the prefix), or one of ours that is already there when the run only makes the missing ones
+local foreign = {}
+local function skip(id)
+  local h = handle("Preset " .. id)
+  if not h then return false end
+  local n = objname(h) or ""
+  if n ~= "" and n:sub(1, #CFG.PREFIX + 1) ~= CFG.PREFIX .. " " then
+    foreign[#foreign + 1] = "Preset " .. id .. " (" .. n .. ")"
+    return true
+  end
+  if not replace then kept = kept + 1 return true end
+  return false
+end
+
 local function store(pool, no, label, lines)
   local id = pool .. "." .. no
-  if not replace and handle("Preset " .. id) then kept = kept + 1 return end
+  if skip(id) then return end
   cmd("ClearAll")
   cmd("MAtricksReset")
   cmd(group_list())
@@ -228,7 +251,7 @@ local function dimmer()
       local key = ({sine = "sin", down = "rdn", up = "rup", square = "pwm"})[shape]
       if forms[key] then l = fx(A.dim, forms[key], 0, 100, CFG.DIM_BPM, width(n)) end
     end
-    if l then store(1, S + i - 1, f[1], l) end
+    if l then store(1, N.dim + i - 1, f[1], l) end
   end
 end
 
@@ -259,9 +282,9 @@ local function colors()
   for i, c in ipairs(COLORS) do
     local rgb = c[2]
     local white = (rgb[1] >= 100 and rgb[2] >= 100 and rgb[3] >= 100) and 100 or 0
-    store(4, S + i - 1, c[1], color_lines(tint(rgb, white, 0)))
-    store(4, S + 30 + i - 1, c[1] .. " Pastel", color_lines(tint(rgb, white, 1)))
-    store(4, S + 60 + i - 1, c[1] .. " Dark", color_lines(tint(rgb, white, 2)))
+    store(4, N.col + i - 1, c[1], color_lines(tint(rgb, white, 0)))
+    store(4, N.pastel + i - 1, c[1] .. " Pastel", color_lines(tint(rgb, white, 1)))
+    store(4, N.dark + i - 1, c[1] .. " Dark", color_lines(tint(rgb, white, 2)))
   end
 end
 
@@ -307,10 +330,10 @@ local function position()
       local v = (a == b) and num(a) or (num(a) .. " Thru " .. num(b))
       l = per_group(function() return {at(A.pan, v)} end)
     end
-    store(2, S + i - 1, p[1], without(A.tilt, l))
+    store(2, N.pan + i - 1, p[1], without(A.tilt, l))
   end
   for i, t in ipairs(TILTS) do
-    store(2, S + 20 + i - 1, t[1], without(A.pan, {at(A.tilt, t[2])}))
+    store(2, N.tilt + i - 1, t[1], without(A.pan, {at(A.tilt, t[2])}))
   end
 end
 
@@ -322,19 +345,19 @@ local function position_fx()
     local tag = ({" -", "", " +"})[s]
     local pan = {{"Pan Swing", -Z, Z}, {"Pan Left", -2 * Z, 0}, {"Pan Right", 0, 2 * Z}, {"Pan Wide", -2 * Z, 2 * Z}}
     for i, p in ipairs(pan) do
-      store(2, S + 50 + (i - 1) * 3 + (s - 1), p[1] .. tag, without(A.tilt, fx(A.pan, forms.sin, p[2], p[3], B)))
+      store(2, N.panfx + (i - 1) * 3 + (s - 1), p[1] .. tag, without(A.tilt, fx(A.pan, forms.sin, p[2], p[3], B)))
     end
     local tilt = {{"Tilt Swing", -Z, Z}, {"Tilt Up", 0, Z}, {"Tilt Down", -Z, 0}}
     for i, t in ipairs(tilt) do
-      store(2, S + 70 + (i - 1) * 3 + (s - 1), t[1] .. tag, without(A.pan, fx(A.tilt, forms.sin, t[2], t[3], B)))
+      store(2, N.tiltfx + (i - 1) * 3 + (s - 1), t[1] .. tag, without(A.pan, fx(A.tilt, forms.sin, t[2], t[3], B)))
     end
     local R = CFG.CIRCLE_SIZE[s] or Z
-    store(2, S + 70 + 9 + (s - 1), "Circle" .. tag,
+    store(2, N.tiltfx + 9 + (s - 1), "Circle" .. tag,
       add(fx(A.pan, forms.sin, -R, R, B), fx(A.tilt, forms.cos, -R, R, B)))
   end
 end
 
--- Fly In / Out (All pool 0.271-276): the tilt sweeps while the dimmer snaps on and fades out
+-- Fly In / Out (All pool 0.4-9): the tilt sweeps while the dimmer snaps on and fades out
 local function fly()
   if not (forms.rup and forms.rdn) then return end
   local B = CFG.PFX_BPM
@@ -342,16 +365,16 @@ local function fly()
     local tag = ({" -", "", " +"})[s]
     for fi, f in ipairs({{"Fly In", forms.rdn}, {"Fly Out", forms.rup}}) do
       local l = add(fx(A.tilt, f[2], -Z, Z, B), fx(A.dim, forms.rdn, 0, 100, B, 60))
-      store(0, S + 70 + (fi - 1) * 3 + (s - 1), f[1] .. tag, without(A.pan, l))
+      store(0, N.fly + (fi - 1) * 3 + (s - 1), f[1] .. tag, without(A.pan, l))
     end
   end
 end
 
 local function focus()
   for i, n in ipairs({"Zoom Narrow", "Zoom Mid", "Zoom Wide", "Zoom Full"}) do
-    store(6, 200 + i, n, {at(A.zoom, CFG.ZOOM[i])})
+    store(6, N.zoom + i - 1, n, {at(A.zoom, CFG.ZOOM[i])})
   end
-  if forms.sin then store(6, 205, "Zoom Sine", fx(A.zoom, forms.sin, CFG.ZOOM[1], CFG.ZOOM[4], CFG.DIM_BPM)) end
+  if forms.sin then store(6, N.zoom + 4, "Zoom Sine", fx(A.zoom, forms.sin, CFG.ZOOM[1], CFG.ZOOM[4], CFG.DIM_BPM)) end
 end
 
 -- strobe lines for a selection: a dimmer effect (MA2 can't call a shutter's strobe range by name)
@@ -371,7 +394,7 @@ local function strobes()
     local l = strobe_lines(k[2])
     if l then
       if k[2] == "random" then l = per_group(function() return strobe_lines("random") end) end
-      store(0, S + 20 + i - 1, k[1], l)
+      store(0, N.strobe + i - 1, k[1], l)
     end
   end
   for _, g in ipairs(groups) do
@@ -380,9 +403,7 @@ local function strobes()
       if l then
         -- the group only: its own selection, not every group
         local no = CFG.STROBE_GRP[k[1]] + g.no
-        if not replace and handle("Preset 0." .. no) then
-          kept = kept + 1
-        else
+        if not skip("0." .. no) then
           cmd("ClearAll"); cmd("MAtricksReset")
           for _, x in ipairs(add({"Group " .. g.no}, l)) do cmd(x) end
           cmd("Store Preset 0." .. no .. " /overwrite /selective /noconfirm")
@@ -395,22 +416,22 @@ local function strobes()
   end
 end
 
--- Bump options (All pool 0.281-293, MA3's 21.281-293). Prism 1 / Prism 2 / Gobo 1 come from each
+-- Bump options (All pool 0.10-18, MA3's 21.281-293). Prism 1 / Prism 2 / Gobo 1 come from each
 -- fixture's own wheel on MA3; MA2's Lua can't read the wheels, so those three are not made.
 local function bump_opts()
   local Z = CFG.ZOOM
   local opts = {
-    {1, "Dim 0", {at(A.dim, 0)}},
-    {2, "Prism Open", {at(A.prism, 0)}},
-    {6, "Gobo Open", {at(A.gobo, 0)}},
-    {7, "Iris Close", {at(A.iris, 100)}},
-    {8, "Iris Open", {at(A.iris, 0)}},
-    {9, "Zoom Small", {at(A.zoom, Z[1])}},
-    {10, "Zoom Big", {at(A.zoom, Z[4])}},
-    {11, "Tilt Up", without(A.pan, {at(A.tilt, CFG.TILT_UP)})},
-    {12, "Tilt Down", without(A.pan, {at(A.tilt, 0)})},
+    {"Dim 0", {at(A.dim, 0)}},
+    {"Prism Open", {at(A.prism, 0)}},
+    {"Gobo Open", {at(A.gobo, 0)}},
+    {"Iris Close", {at(A.iris, 100)}},
+    {"Iris Open", {at(A.iris, 0)}},
+    {"Zoom Small", {at(A.zoom, Z[1])}},
+    {"Zoom Big", {at(A.zoom, Z[4])}},
+    {"Tilt Up", without(A.pan, {at(A.tilt, CFG.TILT_UP)})},
+    {"Tilt Down", without(A.pan, {at(A.tilt, 0)})},
   }
-  for _, o in ipairs(opts) do store(0, 281 + o[1] - 1, "Bump " .. o[2], o[3]) end
+  for i, o in ipairs(opts) do store(0, N.bump + i - 1, "Bump " .. o[1], o[2]) end
 end
 
 -------------------------------------------------------------------------------------------------
@@ -422,7 +443,7 @@ local STEPS = {
 }
 
 local function Start()
-  count, notes, groups, forms, made, missing, kept = 0, {}, {}, {}, 0, {}, 0
+  count, notes, groups, forms, made, missing, kept, foreign = 0, {}, {}, {}, 0, {}, 0, {}
   find_groups()
   if #groups == 0 then
     gma.gui.msgbox("FireSystem Presets", "No groups found. Store groups " .. table.concat(CFG.GROUPS, ", ") .. " first.")
@@ -432,8 +453,8 @@ local function Start()
   local names = {}
   for _, g in ipairs(groups) do names[#names + 1] = g.no .. " " .. g.name end
   local msg = "Make FireSystem presets for " .. #groups .. " groups?\n" .. table.concat(names, ", ") ..
-    "\n\nDimmer 1.201+, Position 2.201+, Colour 4.201+, Focus 6.201+, All 0.221+." ..
-    "\nThe programmer is cleared."
+    "\n\nPresets from .1 in Dimmer 1, Position 2, Colour 4, Focus 6 and All 0." ..
+    "\nPresets already there that aren't FireSystem's are left alone.\nThe programmer is cleared."
   if not gma.gui.confirm("FireSystem Presets", msg) then return end
   replace = gma.gui.confirm("FireSystem Presets",
     "Replace FireSystem presets that are already there?\n\nOK = make them all again\nCancel = only make the missing ones")
@@ -450,6 +471,10 @@ local function Start()
 
   local out = "Done: " .. made .. " presets made" .. (kept > 0 and (", " .. kept .. " kept") or "") ..
     " for " .. #groups .. " groups (" .. count .. " commands).\n"
+  if #foreign > 0 then
+    out = out .. "\nLeft alone (not FireSystem's, move them or rename them \"" .. CFG.PREFIX .. " ...\" to replace):\n" ..
+      table.concat(foreign, "\n", 1, math.min(#foreign, 15)) .. (#foreign > 15 and ("\n... and " .. (#foreign - 15) .. " more") or "") .. "\n"
+  end
   if #notes > 0 then out = out .. "\nNotes:\n" .. table.concat(notes, "\n") .. "\n" end
   if #missing > 0 then
     out = out .. "\nMA2 did not make:\n" .. table.concat(missing, "\n", 1, math.min(#missing, 15))
