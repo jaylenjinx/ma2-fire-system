@@ -39,5 +39,5 @@ These rules apply to every change in this repo.
 - Branches are `feature/<slug>`; merge to main through a PR (rebase merge, so the commits land
   as written).
 - No venue names in the repo.
-- Versions: bump the version in the plugin's README line / header when a change is merged
-  (there is no release workflow yet).
+- Releases: none yet. When a release workflow is added, it works like FireSystem's: the version
+  is bumped in the PR, and the workflow runs on main after the merge.
