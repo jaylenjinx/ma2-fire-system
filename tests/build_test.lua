@@ -17,24 +17,29 @@ local function grep(stub, pattern)
   return out
 end
 
--- rows: SEQ + 20 per row; bumps SEQ + 101-108, strobes SEQ + 121-128, Strobe All SEQ + 140
+-- rows: SEQ + 20 per row; bumps SEQ + 201-208, strobes SEQ + 221-228, Strobe All SEQ + 240,
+-- X-Keys SEQ + 261-268
 test("cues only go into its sequence ranges", function()
   local stub, CFG, _, ROWS = build({1, 2})
   local cues = grep(stub, "^Store Cue %d+ Sequence (%d+)")
   t.ok(#cues > 0, "no cues stored")
-  t.ok(#ROWS * 20 <= 100, "rows run into the bump sequences")
+  t.ok(#ROWS * 20 <= 200, "rows run into the bump sequences")
+  local xkeys = 0
   for _, s in ipairs(cues) do
     local o = s - CFG.SEQ
-    t.ok((o > 0 and o <= #ROWS * 20) or (o > 100 and o <= 108) or (o > 120 and o <= 128) or o == 140, "Sequence " .. s)
+    if o > 260 and o <= 268 then xkeys = xkeys + 1 end
+    t.ok((o > 0 and o <= #ROWS * 20) or (o > 200 and o <= 208) or (o > 220 and o <= 228) or o == 240
+      or (o > 260 and o <= 268), "Sequence " .. s)
   end
+  t.eq(xkeys, 2)
 end)
 
 test("macros only go into the range the confirm dialog announces", function()
   local stub, CFG, H = build({1, 2})
   local macros = grep(stub, "^Store Macro 1%.(%d+)$")
   t.ok(#macros > 0, "no macros stored")
-  for _, m in ipairs(macros) do t.ok(m >= CFG.MACRO and m <= H.phase + 60, "Macro " .. m) end
-  t.ok(stub.confirms[1]:find("macros " .. CFG.MACRO .. "%-" .. (H.phase + 60)), "range not announced")
+  for _, m in ipairs(macros) do t.ok(m >= CFG.MACRO and m <= H.last, "Macro " .. m) end
+  t.ok(stub.confirms[1]:find("macros " .. CFG.MACRO .. "%-" .. H.last), "range not announced")
 end)
 
 test("only the groups that exist get rows", function()
