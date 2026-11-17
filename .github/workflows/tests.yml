@@ -1,0 +1,22 @@
+# Runs the repo's checks (python3 tools/dev.py: tests, Lua 5.3 compile + MA rules, smoke run) on
+# every pull request and every push to main.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the repo-rule check reads this branch's commits against origin/main
+      - name: Install Lua 5.3
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.3
+      - name: Fetch main
+        run: git fetch -q origin main:refs/remotes/origin/main || true
+      - name: Test, check, smoke
+        run: python3 tools/dev.py

@@ -27,6 +27,12 @@ Edit an empty plugin > Import > `FireSystemMA2.xml`. Run it from the pool (or `P
 At the end the plugin checks every sequence, macro and layout it made and lists what MA2 refused.
 Every command is echoed to the System Monitor with `FS2>` so a failing one can be found.
 
+## Tests and project rules
+Rules for every change (tests first, commits, branches) are in [CONTRIBUTING.md](CONTRIBUTING.md).
+`python3 tools/dev.py` runs the unit tests (`tests/*_test.lua`), a Lua 5.3 compile check and a smoke run
+that builds the show against a stand-in for MA2's `gma` API. Needs Lua 5.3 (`brew install lua@5.3`).
+`.github/workflows/tests.yml` runs it on every pull request.
+
 ## Tested
 grandMA2 onPC 3.9.63 (CrossOver on macOS), 2026-10-31: build of 8 groups in under 30 s (13,675 commands),
 Dim FX look buttons, PREP + FIRE and the layouts checked live.
